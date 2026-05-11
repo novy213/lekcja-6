@@ -1,5 +1,5 @@
 from src.models import Apartment, Bill, Parameters, Tenant, TenantSettlement, Transfer, ApartmentSettlement
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 class Manager:
     def __init__(self, parameters: Parameters):
@@ -71,4 +71,32 @@ class Manager:
             )
         for tenant in tenants_in_apartment ] 
     
+    def get_tax(self, year: int, month: int, tax_rate: float) -> int:
+        if month < 1 or month > 12:
+            raise ValueError("Month must be between 1 and 12")
+        
+        total_income = 0.0
+        for transfer in self.transfers:
+            if transfer.settlement_year == year and transfer.settlement_month == month:
+                total_income += transfer.amount_pln
+        
+        tax = total_income * tax_rate
+        return round(tax)
+    
+    def check_deposits(self) -> Dict[str, Any]:
+        verified_deposits: Dict[str, bool] = {}
+        
+        for tenant_key, tenant in self.tenants.items():
+            total_paid = 0.0
+            for transfer in self.transfers:
+                if transfer.tenant == tenant_key:
+                    total_paid += transfer.amount_pln
+            verified_deposits[tenant.name] = total_paid == tenant.deposit_pln
+        
+        all_verified = all(verified_deposits.values())
+        
+        return {
+            'all_deposits_verified': all_verified,
+            'verified_deposits': verified_deposits
+        }
     

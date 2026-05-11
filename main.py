@@ -1,3 +1,5 @@
+﻿import sys
+
 from src.manager import Manager
 from src.models import Parameters
 
@@ -63,11 +65,45 @@ def display_tenants(manager):
                 print(f"      • {format_currency(transfer.amount_pln):>15}  Date: {transfer.date}  Period: {month_year}")
 
 
+def display_settlement(manager, apartment_key: str, year: int, month: int):
+    apartment_settlement = manager.get_settlement(apartment_key, year, month)
+    if apartment_settlement is None:
+        print(f"Nie znaleziono rozliczenia dla mieszkania '{apartment_key}' w okresie {month}/{year}.")
+        return
+
+    print_section_header(f"SETTLEMENT: {apartment_key} ({month}/{year})")
+    print(f"Apartment: {apartment_key}")
+    print(f"Year: {year}")
+    print(f"Month: {month}")
+    print(f"Total due: {format_currency(apartment_settlement.total_due_pln)}")
+    print(f"Apartment costs: {format_currency(manager.get_apartment_costs(apartment_key, year, month))}")
+
+    tenant_settlements = manager.create_tenants_settlements(apartment_settlement)
+    if not tenant_settlements:
+        print("Brak lokatorów do rozliczenia dla tego mieszkania.")
+        return
+
+    print_subsection_header("Tenant settlements")
+    for tenant_settlement in tenant_settlements:
+        print(f"      • {tenant_settlement.tenant}: {format_currency(tenant_settlement.total_due_pln)}")
+
+
 if __name__ == '__main__':
     parameters = Parameters()
     manager = Manager(parameters)
 
-    display_apartments(manager)
-    display_tenants(manager)
-    
-    print(f"\n{'=' * 70}\n")
+    if len(sys.argv) == 4:
+        apartment_key = sys.argv[1]
+        try:
+            year = int(sys.argv[2])
+            month = int(sys.argv[3])
+        except ValueError:
+            print("Błąd: rok i miesiąc muszą być liczbami całkowitymi.")
+            print("Użycie: python main.py <apartment_key> <year> <month>")
+            sys.exit(1)
+
+        display_settlement(manager, apartment_key, year, month)
+    else:
+        display_apartments(manager)
+        display_tenants(manager)
+        print(f"\n{'=' * 70}\n")
